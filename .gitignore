@@ -1,0 +1,10 @@
+# Build outputs
+build/
+**/build/
+
+# IDE files
+.idea/
+*.iml
+
+# Local configuration
+local.properties
