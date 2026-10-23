@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -40,31 +41,54 @@ fun App() {
     }
 }
 
+/**
+ * The Le Chonk Runner screen.
+ *
+ * The whole game lives in this shared module: the game loop ([GameLoop]),
+ * the tap-to-jump input, the Canvas rendering and the accessibility
+ * description of the drawn scene.
+ */
 @Composable
 private fun LeChonkGameScreen() {
     val game = remember { LeChonkRunner() }
+    GameLoop(game)
+    GameScene(game)
+}
 
-    // The game loop: advance the game on every frame.
+/**
+ * The game loop: advances the game on every animation frame, so Le Chonk
+ * runs to the right on his own, without any input.
+ */
+@Composable
+private fun GameLoop(game: LeChonkRunner) {
     LaunchedEffect(game) {
-        var lastFrameNanos = 0L
+        var previousFrameNanos = 0L
         while (isActive) {
             withFrameNanos { frameNanos ->
                 val deltaSeconds =
-                    if (lastFrameNanos == 0L) 0f
-                    else (frameNanos - lastFrameNanos) / 1_000_000_000f
-                lastFrameNanos = frameNanos
+                    if (previousFrameNanos == 0L) 0f
+                    else (frameNanos - previousFrameNanos) / 1_000_000_000f
+                previousFrameNanos = frameNanos
+                // Clamp the step so one long frame (e.g. after a pause)
+                // cannot teleport Le Chonk.
                 game.update(deltaSeconds.coerceIn(0f, 0.1f))
             }
         }
     }
+}
 
-    // Internal state (position along the track, in the air) is only
+/** The drawn scene: the flat ground and Le Chonk, plus the on-screen status. */
+@Composable
+private fun GameScene(game: LeChonkRunner) {
+    // The Canvas draws art, not text, so it carries a content description in
+    // every build. Internal state (track position, airborne) is only
     // described in debuggable builds.
     val sceneDescription = game.sceneDescription(includeInternalState = isDebuggable())
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // Tap anywhere on the screen to jump.
             .pointerInput(game) { detectTapGestures { game.jump() } }
             .background(SkyColor)
             .safeContentPadding(),
@@ -80,24 +104,30 @@ private fun LeChonkGameScreen() {
             drawGround()
             drawLeChonk(game)
         }
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = "Le Chonk Runner",
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text(
-                text = "Distance: ${game.distance.toInt()} m",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "Tap anywhere to jump",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
+        ScoreBoard(game)
+    }
+}
+
+/** The title, the score and the hint, as real text (not drawn on a Canvas). */
+@Composable
+private fun BoxScope.ScoreBoard(game: LeChonkRunner) {
+    Column(
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Le Chonk Runner",
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        Text(
+            text = "Distance: ${game.distance.toInt()} m",
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = "Tap anywhere to jump",
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
