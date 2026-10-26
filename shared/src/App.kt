@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.dp
 import dev.dambatenne.lechonk.game.LeChonkRunner
 import dev.dambatenne.lechonk.game.SkyColor
 import dev.dambatenne.lechonk.game.drawGround
+import dev.dambatenne.lechonk.game.drawHearts
 import dev.dambatenne.lechonk.game.drawLeChonk
+import dev.dambatenne.lechonk.game.drawObstacles
 import dev.dambatenne.lechonk.game.sceneDescription
 import kotlinx.coroutines.isActive
 import org.jetbrains.compose.reload.DevelopmentEntryPoint
@@ -77,12 +79,12 @@ private fun GameLoop(game: LeChonkRunner) {
     }
 }
 
-/** The drawn scene: the flat ground and Le Chonk, plus the on-screen status. */
+/** The drawn scene: the flat ground, the obstacles, Le Chonk and the hearts, plus the on-screen status. */
 @Composable
 private fun GameScene(game: LeChonkRunner) {
     // The Canvas draws art, not text, so it carries a content description in
-    // every build. Internal state (track position, airborne) is only
-    // described in debuggable builds.
+    // every build. Internal state (track position, airborne, obstacle
+    // positions, jumps and hits) is only described in debuggable builds.
     val sceneDescription = game.sceneDescription(includeInternalState = isDebuggable())
 
     Box(
@@ -102,7 +104,9 @@ private fun GameScene(game: LeChonkRunner) {
                 },
         ) {
             drawGround()
+            drawObstacles(game)
             drawLeChonk(game)
+            drawHearts(game)
         }
         ScoreBoard(game)
     }
@@ -114,7 +118,8 @@ private fun BoxScope.ScoreBoard(game: LeChonkRunner) {
     Column(
         modifier = Modifier
             .align(Alignment.TopCenter)
-            .padding(16.dp),
+            // The top padding leaves room for the hearts drawn at the top of the screen.
+            .padding(top = 56.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
