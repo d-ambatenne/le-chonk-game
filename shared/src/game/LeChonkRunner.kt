@@ -26,6 +26,11 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
  * and flashes for [hitFlashSeconds] seconds; while the flash lasts he
  * cannot be hit again, so one obstacle costs at most one heart. Jumping
  * above an obstacle's top clears it without a collision.
+ *
+ * The score grows over time while the game runs: [score] counts one point
+ * per [scoreUnitsPerPoint] track units run. When the hearts reach zero the
+ * game is over ([isGameOver]): the score stops growing, Le Chonk cannot
+ * jump anymore, and [restart] starts a new game.
  */
 @Stable
 class LeChonkRunner(
@@ -49,10 +54,20 @@ class LeChonkRunner(
     val obstacleSpawnInterval: Float = 2.5f,
     /** How long the hit flash (and the invulnerability) lasts, in seconds. */
     val hitFlashSeconds: Float = 0.5f,
+    /** Track units that make up one score point. */
+    val scoreUnitsPerPoint: Float = 10f,
 ) {
     /** Distance run so far, in track units. Also the score. */
     var distance by mutableStateOf(0f)
         private set
+
+    /**
+     * The score, in points: one point per [scoreUnitsPerPoint] track units
+     * run. It increases over time while the game runs and stops when the
+     * game is over.
+     */
+    val score: Int
+        get() = (distance / scoreUnitsPerPoint).toInt()
 
     /** Height above the ground, in track units. Zero means standing on the ground. */
     var heightAboveGround by mutableStateOf(0f)
@@ -64,6 +79,10 @@ class LeChonkRunner(
     /** Hearts left. One heart is lost each time Le Chonk collides with an obstacle. */
     var hearts by mutableStateOf(maxHearts)
         private set
+
+    /** Whether the game is over: Le Chonk has run out of hearts. */
+    val isGameOver: Boolean
+        get() = hearts <= 0
 
     /** Obstacles currently on the screen, scrolling left toward Le Chonk. */
     val obstacles: SnapshotStateList<Obstacle> = mutableStateListOf()
@@ -99,10 +118,11 @@ class LeChonkRunner(
      * Advances the game by [deltaSeconds] of simulated time: Le Chonk runs
      * to the right, gravity acts on his jump until he lands, obstacles
      * scroll left, new obstacles spawn at the right edge, collisions remove
-     * hearts and the hit flash ticks down.
+     * hearts and the hit flash ticks down. Does nothing once the game is
+     * over, so the final score stays put.
      */
     fun update(deltaSeconds: Float) {
-        if (deltaSeconds <= 0f) return
+        if (deltaSeconds <= 0f || isGameOver) return
         runToTheRight(deltaSeconds)
         if (isInAir) {
             applyGravity(deltaSeconds)
@@ -117,13 +137,30 @@ class LeChonkRunner(
 
     /**
      * The tap input: jump. Tapping while already in the air does nothing, so
-     * a jump cannot be restarted mid-flight.
+     * a jump cannot be restarted mid-flight. Tapping does nothing once the
+     * game is over.
      */
     fun jump() {
-        if (!isInAir) {
+        if (!isInAir && !isGameOver) {
             verticalVelocity = jumpVelocity
             jumps++
         }
+    }
+
+    /**
+     * Starts a new game: the distance, the score, the hearts, the obstacles
+     * and the jump and hit counters all go back to their starting values.
+     */
+    fun restart() {
+        distance = 0f
+        heightAboveGround = 0f
+        verticalVelocity = 0f
+        hearts = maxHearts
+        obstacles.clear()
+        jumps = 0
+        hits = 0
+        hitFlashRemaining = 0f
+        timeToNextObstacle = obstacleSpawnInterval
     }
 
     /** Auto-run: Le Chonk always moves to the right, without any input. */
@@ -215,12 +252,12 @@ class Obstacle(
 /**
  * Accessibility description of the scene drawn on the Canvas.
  *
- * What the player sees — Le Chonk, the flat ground, the hearts and the
- * obstacles — is described in every build. Internal state (where Le Chonk is
- * along the track, whether he is in the air, where the obstacles are, how
- * many jumps and hits happened, whether he is flashing) is only described
- * when [includeInternalState] is true, which the UI passes only in
- * debuggable builds.
+ * What the player sees — Le Chonk, the flat ground, the hearts, the
+ * obstacles and whether the game is over — is described in every build.
+ * Internal state (where Le Chonk is along the track, whether he is in the
+ * air, where the obstacles are, how many jumps and hits happened, whether
+ * he is flashing) is only described when [includeInternalState] is true,
+ * which the UI passes only in debuggable builds.
  */
 fun LeChonkRunner.sceneDescription(includeInternalState: Boolean): String {
     val drawnScene = buildString {
@@ -228,6 +265,9 @@ fun LeChonkRunner.sceneDescription(includeInternalState: Boolean): String {
         append(", $hearts of $maxHearts hearts at the top of the screen")
         if (obstacles.isNotEmpty()) {
             append(", ${obstacles.size} ${if (obstacles.size == 1) "obstacle" else "obstacles"} on the track")
+        }
+        if (isGameOver) {
+            append(", game over")
         }
     }
     if (!includeInternalState) return drawnScene

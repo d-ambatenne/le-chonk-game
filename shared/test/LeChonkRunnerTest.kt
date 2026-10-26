@@ -85,6 +85,24 @@ class LeChonkRunnerTest {
     }
 
     @Test
+    fun `the score increases over time while the game runs`() {
+        val game = LeChonkRunner()
+        assertEquals(0, game.score)
+        game.update(1f)
+        val scoreAfterOneSecond = game.score
+        assertTrue(scoreAfterOneSecond > 0, "The score should increase while the game runs")
+        game.update(1f)
+        assertTrue(game.score > scoreAfterOneSecond, "The score should keep increasing over time")
+    }
+
+    @Test
+    fun `the score counts one point per scoreUnitsPerPoint track units`() {
+        val game = LeChonkRunner(runSpeed = 100f, scoreUnitsPerPoint = 10f)
+        game.update(1f) // 100 track units run
+        assertEquals(10, game.score)
+    }
+
+    @Test
     fun `the scene description always describes what is drawn`() {
         val game = LeChonkRunner()
         val description = game.sceneDescription(includeInternalState = false)
