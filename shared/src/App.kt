@@ -3,12 +3,14 @@ package dev.dambatenne.lechonk
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,9 +19,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,7 +58,12 @@ fun App() {
 private fun LeChonkGameScreen() {
     val game = remember { LeChonkRunner() }
     GameLoop(game)
-    GameScene(game)
+    Box {
+        GameScene(game)
+        if (game.isGameOver) {
+            GameOverScreen(game)
+        }
+    }
 }
 
 /**
@@ -127,12 +136,50 @@ private fun BoxScope.ScoreBoard(game: LeChonkRunner) {
             style = MaterialTheme.typography.headlineMedium,
         )
         Text(
-            text = "Distance: ${game.distance.toInt()} m",
+            text = "Score: ${game.score}",
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
             text = "Tap anywhere to jump",
             style = MaterialTheme.typography.bodyMedium,
         )
+    }
+}
+
+/**
+ * The game-over screen, shown when Le Chonk runs out of hearts: the final
+ * score and a restart button that starts a new game. The title, the score
+ * and the button are real text, so the whole screen is readable in the
+ * accessibility tree.
+ */
+@Composable
+private fun GameOverScreen(game: LeChonkRunner) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = "Game Over",
+                style = MaterialTheme.typography.headlineLarge,
+                color = Color.White,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = "Final score: ${game.score}",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+            )
+            Button(onClick = { game.restart() }) {
+                Text("Restart")
+            }
+        }
     }
 }
