@@ -280,16 +280,22 @@ val LeChonkRunner.pose: LeChonkPose
 /**
  * Accessibility description of the scene drawn on the Canvas.
  *
- * What the player sees — Le Chonk, the flat ground, the hearts, the
+ * What the player sees — the parallax background (sky gradient, clouds,
+ * mountains, hills and trees), Le Chonk, the flat ground, the hearts, the
  * obstacles and whether the game is over — is described in every build.
  * Internal state (where Le Chonk is along the track, whether he is in the
  * air, where the obstacles are, how many jumps and hits happened, whether
  * he is flashing) is only described when [includeInternalState] is true,
  * which the UI passes only in debuggable builds.
  */
-fun LeChonkRunner.sceneDescription(includeInternalState: Boolean): String {
+fun LeChonkRunner.sceneDescription(
+    includeInternalState: Boolean,
+    background: ParallaxBackground = ParallaxBackground(trackLength = trackLength),
+): String {
     val drawnScene = buildString {
-        append("Le Chonk, the chonky orange striped cat, on flat ground")
+        append("A parallax background: a sky gradient with clouds, mountains, hills and trees")
+        append(" on layers that scroll at different speeds")
+        append(", Le Chonk, the chonky orange striped cat, on flat ground")
         append(", $hearts of $maxHearts hearts at the top of the screen")
         if (obstacles.isNotEmpty()) {
             append(", ${obstacles.size} ${if (obstacles.size == 1) "obstacle" else "obstacles"} on the track")
@@ -318,6 +324,10 @@ fun LeChonkRunner.sceneDescription(includeInternalState: Boolean): String {
         val positions = obstacles.joinToString(", ") { "${(it.x / trackLength * 100f).toInt()}%" }
         "Obstacles at $positions along the track"
     }
+    val parallax = background.layers.joinToString(", ") { layer ->
+        val percent = (layer.speedFactor * 100f).toInt()
+        "${layer.name} scrolling at $percent% of the run speed"
+    }
     val flash = if (isFlashing) " Le Chonk is flashing after a hit." else ""
-    return "$drawnScene. $runner. $obstaclesDescription. jumps: $jumps, hits: $hits.$flash"
+    return "$drawnScene. $runner. $obstaclesDescription. Background layers: $parallax. jumps: $jumps, hits: $hits.$flash"
 }
