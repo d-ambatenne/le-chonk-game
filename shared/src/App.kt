@@ -30,11 +30,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.dambatenne.lechonk.game.LeChonkRunner
 import dev.dambatenne.lechonk.game.LeChonkSprites
-import dev.dambatenne.lechonk.game.SkyColor
+import dev.dambatenne.lechonk.game.ParallaxBackground
 import dev.dambatenne.lechonk.game.drawGround
 import dev.dambatenne.lechonk.game.drawHearts
 import dev.dambatenne.lechonk.game.drawLeChonk
 import dev.dambatenne.lechonk.game.drawObstacles
+import dev.dambatenne.lechonk.game.drawParallaxBackground
 import dev.dambatenne.lechonk.game.sceneDescription
 import kotlinx.coroutines.isActive
 import org.jetbrains.compose.reload.DevelopmentEntryPoint
@@ -58,9 +59,12 @@ fun App() {
 @Composable
 private fun LeChonkGameScreen() {
     val game = remember { LeChonkRunner() }
+    // The parallax background: sky gradient, clouds, mountains, hills and
+    // trees on layers that scroll at different speeds as Le Chonk runs.
+    val background = remember { ParallaxBackground(trackLength = game.trackLength) }
     GameLoop(game)
     Box {
-        GameScene(game)
+        GameScene(game, background)
         if (game.isGameOver) {
             GameOverScreen(game)
         }
@@ -89,23 +93,25 @@ private fun GameLoop(game: LeChonkRunner) {
     }
 }
 
-/** The drawn scene: the flat ground, the obstacles, Le Chonk and the hearts, plus the on-screen status. */
+/** The drawn scene: the parallax background, the flat ground, the obstacles, Le Chonk and the hearts, plus the on-screen status. */
 @Composable
-private fun GameScene(game: LeChonkRunner) {
+private fun GameScene(game: LeChonkRunner, background: ParallaxBackground) {
     // Le Chonk's sprite set: the idle frames, the run cycle and the jump
     // pose, loaded once from the compose resources.
     val sprites = LeChonkSprites.rememberLeChonkSprites()
     // The Canvas draws art, not text, so it carries a content description in
     // every build. Internal state (track position, airborne, obstacle
     // positions, jumps and hits) is only described in debuggable builds.
-    val sceneDescription = game.sceneDescription(includeInternalState = isDebuggable())
+    val sceneDescription = game.sceneDescription(
+        includeInternalState = isDebuggable(),
+        background = background,
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             // Tap anywhere on the screen to jump.
             .pointerInput(game) { detectTapGestures { game.jump() } }
-            .background(SkyColor)
             .safeContentPadding(),
     ) {
         Canvas(
@@ -116,6 +122,7 @@ private fun GameScene(game: LeChonkRunner) {
                     contentDescription = sceneDescription
                 },
         ) {
+            drawParallaxBackground(background, game.distance)
             drawGround()
             drawObstacles(game)
             drawLeChonk(game, sprites)
