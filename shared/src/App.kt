@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.dambatenne.lechonk.game.LeChonkRunner
+import dev.dambatenne.lechonk.game.LeChonkSprites
 import dev.dambatenne.lechonk.game.SkyColor
 import dev.dambatenne.lechonk.game.drawGround
 import dev.dambatenne.lechonk.game.drawHearts
@@ -91,6 +92,9 @@ private fun GameLoop(game: LeChonkRunner) {
 /** The drawn scene: the flat ground, the obstacles, Le Chonk and the hearts, plus the on-screen status. */
 @Composable
 private fun GameScene(game: LeChonkRunner) {
+    // Le Chonk's sprite set: the idle frames, the run cycle and the jump
+    // pose, loaded once from the compose resources.
+    val sprites = LeChonkSprites.rememberLeChonkSprites()
     // The Canvas draws art, not text, so it carries a content description in
     // every build. Internal state (track position, airborne, obstacle
     // positions, jumps and hits) is only described in debuggable builds.
@@ -114,7 +118,7 @@ private fun GameScene(game: LeChonkRunner) {
         ) {
             drawGround()
             drawObstacles(game)
-            drawLeChonk(game)
+            drawLeChonk(game, sprites)
             drawHearts(game)
         }
         ScoreBoard(game)

@@ -250,6 +250,34 @@ class Obstacle(
 }
 
 /**
+ * The pose Le Chonk's sprite is in, derived from the game state: the jump
+ * pose while he is in the air, the run cycle while he runs on the ground,
+ * and the idle pose when the game is over and he stands still.
+ */
+enum class LeChonkPose {
+    /** The jump pose, shown while Le Chonk is in the air. */
+    Jump,
+
+    /** The run cycle, shown while Le Chonk runs on the ground. */
+    Run,
+
+    /** The idle pose, shown when the game is over and Le Chonk stands still. */
+    Idle,
+}
+
+/**
+ * The pose Le Chonk's sprite is currently in: [LeChonkPose.Jump] while he
+ * is in the air, [LeChonkPose.Run] while he runs on the ground, and
+ * [LeChonkPose.Idle] once the game is over and he stands still.
+ */
+val LeChonkRunner.pose: LeChonkPose
+    get() = when {
+        isInAir -> LeChonkPose.Jump
+        isGameOver -> LeChonkPose.Idle
+        else -> LeChonkPose.Run
+    }
+
+/**
  * Accessibility description of the scene drawn on the Canvas.
  *
  * What the player sees — Le Chonk, the flat ground, the hearts, the
@@ -261,7 +289,7 @@ class Obstacle(
  */
 fun LeChonkRunner.sceneDescription(includeInternalState: Boolean): String {
     val drawnScene = buildString {
-        append("Le Chonk, the chonky cat runner, on flat ground")
+        append("Le Chonk, the chonky orange striped cat, on flat ground")
         append(", $hearts of $maxHearts hearts at the top of the screen")
         if (obstacles.isNotEmpty()) {
             append(", ${obstacles.size} ${if (obstacles.size == 1) "obstacle" else "obstacles"} on the track")
@@ -273,12 +301,16 @@ fun LeChonkRunner.sceneDescription(includeInternalState: Boolean): String {
     if (!includeInternalState) return drawnScene
 
     val position = "at ${(x / trackLength * 100f).toInt()}% along the track"
-    val runner = if (isInAir) {
-        val height = (heightAboveGround / trackLength * 100f).toInt()
-        "Le Chonk is running to the right, in the air $position, " +
-            "$height% of the track above the ground"
-    } else {
-        "Le Chonk is running to the right, on the ground $position"
+    val runner = when (pose) {
+        LeChonkPose.Jump -> {
+            val height = (heightAboveGround / trackLength * 100f).toInt()
+            "Le Chonk is in the air $position, in his jump pose, " +
+                "$height% of the track above the ground"
+        }
+        LeChonkPose.Run ->
+            "Le Chonk is running to the right, on the ground $position, in his run pose"
+        LeChonkPose.Idle ->
+            "Le Chonk is standing still $position, in his idle pose"
     }
     val obstaclesDescription = if (obstacles.isEmpty()) {
         "No obstacles on the track"
